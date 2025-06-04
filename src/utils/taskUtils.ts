@@ -28,10 +28,14 @@ export const createTask = (
     completionNote: null,
     notes: [],
     metrics: {
-  category: 'Uncategorized',
-  completed: false,
-  completionRate: 0
-},
+      priority: 3,
+      estimatedTime: 30,
+      actualTime: 0,
+      category: 'Uncategorized',
+      tags: [],
+      streak: 0,
+      completionRate: 0
+    },
     history: [
       {
         action: 'created',
@@ -83,8 +87,19 @@ export const completeTask = (task: Task, completionNote: string = ''): Task => {
     status: 'completed',
     completedAt: timestamp,
     completionNote: completionNote || null,
-    history: updatedHistory
+    history: updatedHistory,
+    metrics: {
+      ...task.metrics,
+      streak: task.metrics.streak + 1,
+      completionRate: calculateCompletionRate(task)
+    }
   };
+};
+
+const calculateCompletionRate = (task: Task): number => {
+  const totalTasks = task.history.length;
+  const completedTasks = task.history.filter(h => h.action === 'completed').length;
+  return totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
 };
 
 export const updateTask = (
@@ -127,6 +142,18 @@ export const filterTasks = (tasks: Task[], filters: TaskFilters): Task[] => {
     // Color filter
     const colorMatches = !filters.color || task.color === filters.color;
     
-    return textMatches && statusMatches && startDateMatches && endDateMatches && colorMatches;
+    // Category filter
+    const categoryMatches = !filters.category || task.metrics.category === filters.category;
+    
+    // Priority filter
+    const priorityMatches = !filters.priority || task.metrics.priority === filters.priority;
+    
+    // Tags filter
+    const tagsMatch = !filters.tags?.length || 
+      filters.tags.every(tag => task.metrics.tags.includes(tag));
+    
+    return textMatches && statusMatches && startDateMatches && 
+           endDateMatches && colorMatches && categoryMatches && 
+           priorityMatches && tagsMatch;
   });
 };
