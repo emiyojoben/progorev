@@ -27,6 +27,11 @@ export const createTask = (
     completedAt: null,
     completionNote: null,
     notes: [],
+    metrics: {
+  category: 'Uncategorized',
+  completed: false,
+  completionRate: 0
+},
     history: [
       {
         action: 'created',

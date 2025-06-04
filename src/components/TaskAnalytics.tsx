@@ -50,7 +50,7 @@ const TaskAnalytics: React.FC = () => {
   
   // Calculate category distribution
   const categoryData = tasks.reduce((acc, task) => {
-    const category = task.metrics.category || 'Uncategorized';
+    const category = task.metrics?.category || 'Uncategorized';
     acc[category] = (acc[category] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
