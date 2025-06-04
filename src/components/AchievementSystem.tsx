@@ -1,12 +1,34 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, Star, Target, Zap, Award } from 'lucide-react';
+import { Trophy, Star, Target, Zap, Award, Flame, Brain, Coffee } from 'lucide-react';
 import { useTaskContext } from '../context/TaskContext';
+import { Achievement } from '../types/task';
 
 const AchievementSystem: React.FC = () => {
   const { tasks } = useTaskContext();
   
-  const achievements = [
+  const calculateStreak = (): number => {
+    const sortedTasks = [...tasks]
+      .filter(t => t.status === 'completed')
+      .sort((a, b) => new Date(b.completedAt!).getTime() - new Date(a.completedAt!).getTime());
+    
+    let streak = 0;
+    let currentDate = new Date();
+    
+    for (const task of sortedTasks) {
+      const taskDate = new Date(task.completedAt!);
+      if (taskDate.toDateString() === currentDate.toDateString()) {
+        streak++;
+        currentDate.setDate(currentDate.getDate() - 1);
+      } else {
+        break;
+      }
+    }
+    
+    return streak;
+  };
+  
+  const achievements: Achievement[] = [
     {
       id: 'first_task',
       title: 'İlk Görev',
@@ -14,7 +36,7 @@ const AchievementSystem: React.FC = () => {
       icon: Trophy,
       progress: tasks.length > 0 ? 100 : 0,
       target: 1,
-      unlocked: tasks.length > 0,
+      unlockedAt: tasks.length > 0 ? tasks[0].createdAt : undefined
     },
     {
       id: 'task_master',
@@ -23,27 +45,49 @@ const AchievementSystem: React.FC = () => {
       icon: Star,
       progress: Math.min(tasks.filter(t => t.status === 'completed').length * 10, 100),
       target: 10,
-      unlocked: tasks.filter(t => t.status === 'completed').length >= 10,
+      unlockedAt: tasks.filter(t => t.status === 'completed').length >= 10 
+        ? tasks.find(t => t.status === 'completed')?.completedAt 
+        : undefined
     },
     {
       id: 'streak_warrior',
       title: 'Streak Savaşçısı',
       description: '5 gün üst üste görev tamamla',
-      icon: Zap,
-      progress: 60, // This would normally be calculated from actual streak data
+      icon: Flame,
+      progress: (calculateStreak() / 5) * 100,
       target: 5,
-      unlocked: false,
+      unlockedAt: calculateStreak() >= 5 
+        ? new Date().toISOString()
+        : undefined
+    },
+    {
+      id: 'efficiency_expert',
+      title: 'Verimlilik Uzmanı',
+      description: 'Bir görevi tahmin edilen süreden önce tamamla',
+      icon: Brain,
+      progress: tasks.some(t => 
+        t.status === 'completed' && 
+        t.metrics.actualTime! < t.metrics.estimatedTime!
+      ) ? 100 : 0,
+      target: 1,
+      unlockedAt: tasks.find(t => 
+        t.status === 'completed' && 
+        t.metrics.actualTime! < t.metrics.estimatedTime!
+      )?.completedAt
     },
     {
       id: 'category_master',
       title: 'Kategori Ustası',
       description: 'Her kategoriden görev tamamla',
-      icon: Target,
-      progress: 40, // This would be calculated from category completion data
+      icon: Coffee,
+      progress: 40,
       target: 5,
-      unlocked: false,
+      unlockedAt: undefined
     },
   ];
+  
+  const unlockedCount = achievements.filter(a => a.unlockedAt).length;
+  const totalAchievements = achievements.length;
   
   return (
     <motion.div
@@ -53,7 +97,12 @@ const AchievementSystem: React.FC = () => {
       transition={{ duration: 0.5 }}
     >
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold">Başarımlar</h2>
+        <div>
+          <h2 className="text-xl font-semibold">Başarımlar</h2>
+          <p className="text-sm text-gray-500 mt-1">
+            {unlockedCount} / {totalAchievements} tamamlandı
+          </p>
+        </div>
         <Award className="text-[#BEE4D0]" size={24} />
       </div>
       
@@ -63,7 +112,7 @@ const AchievementSystem: React.FC = () => {
             <motion.div
               key={achievement.id}
               className={`p-4 rounded-lg ${
-                achievement.unlocked
+                achievement.unlockedAt
                   ? 'bg-[#DBFFCB] bg-opacity-20'
                   : 'bg-gray-50'
               }`}
@@ -72,7 +121,7 @@ const AchievementSystem: React.FC = () => {
             >
               <div className="flex items-start gap-4">
                 <div className={`p-2 rounded-full ${
-                  achievement.unlocked
+                  achievement.unlockedAt
                     ? 'bg-[#BEE4D0] text-white'
                     : 'bg-gray-200 text-gray-500'
                 }`}>
@@ -83,7 +132,7 @@ const AchievementSystem: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <h3 className="font-medium">{achievement.title}</h3>
                     <span className="text-sm text-gray-500">
-                      {achievement.progress}%
+                      {Math.round(achievement.progress)}%
                     </span>
                   </div>
                   
@@ -99,6 +148,16 @@ const AchievementSystem: React.FC = () => {
                       transition={{ duration: 1, ease: "easeOut" }}
                     />
                   </div>
+                  
+                  {achievement.unlockedAt && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      {new Date(achievement.unlockedAt).toLocaleDateString('tr-TR', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })} tarihinde kazanıldı
+                    </p>
+                  )}
                 </div>
               </div>
             </motion.div>
